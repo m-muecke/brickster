@@ -251,10 +251,10 @@ db_generate_typed_values_sql_for_view <- function(con, data) {
         db_escape_string_literal(con, as.character(val))
       }
     })
-    paste0("(", paste(values, collapse = ", "), ")")
+    paste0("(", toString(values), ")")
   })
   
-  paste(row_values, collapse = ", ")
+  toString(row_values)
 }
 
 # Slightly modified version of sparklyr/R/dplyr_sql_translation.R (thank you!)

@@ -1480,10 +1480,10 @@ db_generate_values_sql <- function(conn, data) {
         as.character(val)
       }
     })
-    paste0("(", paste(values, collapse = ", "), ")")
+    paste0("(", toString(values), ")")
   })
 
-  paste(row_values, collapse = ", ")
+  toString(row_values)
 }
 
 #' Generate type-aware VALUES SQL from data frame
@@ -1509,10 +1509,10 @@ db_generate_typed_values_sql <- function(conn, data) {
         db_escape_string_literal(conn, as.character(val))
       }
     })
-    paste0("(", paste(values, collapse = ", "), ")")
+    paste0("(", toString(values), ")")
   })
 
-  paste(row_values, collapse = ", ")
+  toString(row_values)
 }
 
 #' Escape string literals for inline SQL VALUES
@@ -1569,8 +1569,8 @@ db_create_table_as_select_values <- function(
 #' @keywords internal
 db_append_with_select_values <- function(conn, quoted_name, value) {
   # Get column names with proper quoting
-  col_names <- purrr::map_chr(names(value), ~ dbQuoteIdentifier(conn, .x))
-  col_list <- paste(col_names, collapse = ", ")
+  col_names <- purrr::map_chr(names(value), \(x) dbQuoteIdentifier(conn, x))
+  col_list <- toString(col_names)
 
   # Generate VALUES clause with type-aware formatting
   values_sql <- db_generate_typed_values_sql(conn, value)

@@ -152,7 +152,7 @@ get_uc_model_versions <- function(catalog, schema, model, host, token,
   version_names <- purrr::map_chr(versions, function(x) {
     if (x$version %in% aliases) {
       alias_values <- names(aliases[x$version %in% aliases])
-      alias_part <- paste0("@", alias_values, collapse = ", ")
+      alias_part <- toString("@", alias_values)
       paste0(x$version, " (", alias_part, ")")
     } else {
       x$version
