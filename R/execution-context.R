@@ -368,7 +368,7 @@ db_context_command_parse <- function(
   if (x$results$resultType %in% c("images", "image")) {
     img <- x$results$fileNames[[1]]
     # read as raw
-    raw <- base64enc::base64decode(what = substr(img, 23, nchar(img)))
+    raw <- jsonlite::base64_dec(substr(img, 23, nchar(img)))
     img <- magick::image_read(raw)
     grid::grid.newpage()
     return(grid::grid.raster(img))
