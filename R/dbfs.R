@@ -76,7 +76,7 @@ db_dbfs_create <- function(
 #' @param data Either a path for file on local system or a character/raw
 #' vector that will be base64-encoded. This has a limit of 1 MB.
 #' @param convert_to_raw Boolean (Default: `FALSE`), if `TRUE` will convert
-#' character vector to raw via [as.raw()].
+#' character vector to raw via [charToRaw()].
 #' @inheritParams auth_params
 #' @inheritParams db_sql_warehouse_create
 #'
@@ -108,7 +108,6 @@ db_dbfs_add_block <- function(
     details = "DBFS is no longer best practice; use Unity Catalog volumes instead."
   )
 
-  # `base64enc::base64encode()` can't accept strings
   # if `convert_to_raw` is TRUE then convert so that the string is encoded
   # otherwise it will assume it's a file path on the local system
   if (convert_to_raw) {
@@ -117,10 +116,12 @@ db_dbfs_add_block <- function(
     } else {
       data <- as.raw(data)
     }
+  } else if (is.character(data) && file.exists(data)) {
+    data <- readBin(data, "raw", file.size(data))
   }
 
   # encode data as base64
-  encoded_data <- base64enc::base64encode(data)
+  encoded_data <- jsonlite::base64_enc(data)
 
   # limit of 1MB per block
   obj_size <- round(as.integer(object.size(encoded_data)) / 1024^2, 4)
@@ -534,7 +535,7 @@ db_dbfs_put <- function(
   # file takes priority, so don't bother if file is also specified
   if (!is.null(contents) && is.null(file)) {
     # contents must be base64 encoded string
-    body$contents <- base64enc::base64encode(charToRaw(contents))
+    body$contents <- jsonlite::base64_enc(contents)
   } else if (!is.null(file)) {
     body$contents <- curl::form_file(path = file)
   } else {
