@@ -26,11 +26,13 @@ test_that("Repos API - don't perform", {
     branch = "some_branch",
     perform_request = FALSE
   )
-  expect_s3_class(resp_get, "httr2_request")
+  expect_s3_class(resp_update, "httr2_request")
+  expect_identical(resp_update$body$data$branch, "some_branch")
+  expect_false("endpoint" %in% names(resp_update$body$data))
 
   resp_delete <- db_repo_delete(
     repo_id = "some_id",
     perform_request = FALSE
   )
-  expect_s3_class(resp_get, "httr2_request")
+  expect_s3_class(resp_delete, "httr2_request")
 })

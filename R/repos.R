@@ -154,7 +154,6 @@ db_repo_update <- function(
   perform_request = TRUE
 ) {
   body <- list(
-    endpoint = paste0("repos/", repo_id),
     branch = branch,
     tag = tag
   )
