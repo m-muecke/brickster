@@ -136,6 +136,36 @@ test_that("request helpers - m2m auth flow", {
   )
 })
 
+test_that("request helpers - oauth client is scoped per workspace host", {
+  local_clear_auth_env()
+
+  withr::local_envvar(
+    DATABRICKS_CLIENT_ID = "client-id",
+    DATABRICKS_CLIENT_SECRET = "client-secret"
+  )
+
+  request_client <- function(host) {
+    req <- db_request(
+      endpoint = "clusters/list",
+      method = "GET",
+      version = "2.0",
+      host = host,
+      token = NULL
+    )
+    req$policies$auth_sign$params$flow_params$client
+  }
+
+  client_a <- request_client("workspace-a")
+  client_b <- request_client("workspace-b")
+
+  # each request resolves endpoints for its own host (no global-option bleed)
+  expect_identical(client_a$token_url, "https://workspace-a/oidc/v1/token")
+  expect_identical(client_b$token_url, "https://workspace-b/oidc/v1/token")
+
+  # httr2 caches tokens by client$name, so distinct hosts must not collide
+  expect_false(identical(client_a$name, client_b$name))
+})
+
 test_that("request helpers - azure m2m auth flow", {
   local_clear_auth_env()
 

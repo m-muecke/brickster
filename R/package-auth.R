@@ -462,6 +462,10 @@ resolve_oauth_auth_mode <- function(
   "oauth-u2m"
 }
 
+oauth_client_name <- function(host) {
+  paste0("brickster-", host)
+}
+
 build_databricks_m2m_oauth_client <- function(host, client_id, client_secret) {
   endpoints <- databricks_workspace_oauth_endpoints(host)
 
@@ -470,7 +474,7 @@ build_databricks_m2m_oauth_client <- function(host, client_id, client_secret) {
       id = client_id,
       secret = client_secret,
       token_url = endpoints$token_url,
-      name = "brickster"
+      name = oauth_client_name(host)
     ),
     auth_url = endpoints$auth_url,
     auth_mode = "oauth-m2m",
@@ -488,6 +492,7 @@ databricks_workspace_oauth_endpoints <- function(host) {
 }
 
 build_azure_m2m_oauth_client <- function(
+  host,
   azure_client_id,
   azure_client_secret,
   azure_tenant_id
@@ -499,7 +504,7 @@ build_azure_m2m_oauth_client <- function(
       token_url = glue::glue(
         "https://login.microsoftonline.com/{azure_tenant_id}/oauth2/v2.0/token"
       ),
-      name = "brickster"
+      name = oauth_client_name(host)
     ),
     auth_url = NULL,
     auth_mode = "azure-client-secret",
@@ -516,7 +521,7 @@ build_databricks_u2m_oauth_client <- function(host) {
     client = httr2::oauth_client(
       id = "databricks-cli",
       token_url = endpoints$token_url,
-      name = "brickster"
+      name = oauth_client_name(host)
     ),
     auth_url = endpoints$auth_url,
     auth_mode = "oauth-u2m",
@@ -581,6 +586,7 @@ db_oauth_client <- function(
     )
   } else if (identical(auth_mode, "azure-client-secret")) {
     client_and_auth <- build_azure_m2m_oauth_client(
+      host,
       azure_client_id,
       azure_client_secret,
       azure_tenant_id
@@ -588,9 +594,6 @@ db_oauth_client <- function(
   } else {
     client_and_auth <- build_databricks_u2m_oauth_client(host)
   }
-
-  # add option for client to be fetched via request helpers
-  options(brickster_oauth_client = client_and_auth)
 
   client_and_auth
 }
