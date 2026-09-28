@@ -651,6 +651,45 @@ test_that("dbFetch processes inline results from dbSendQuery", {
   expect_identical(out$id, c(1L, 2L))
 })
 
+test_that("dbFetch follows all inline result chunks", {
+  con <- make_dbi_test_con(disposition = "INLINE")
+  res <- new(
+    "DatabricksResult",
+    statement_id = "stmt-inline",
+    statement = "SELECT 1",
+    connection = con,
+    completed = FALSE,
+    rows_fetched = 0
+  )
+
+  local_mocked_bindings(
+    db_sql_exec_status = function(...) {
+      list(
+        statement_id = "stmt-inline",
+        status = list(state = "SUCCEEDED"),
+        manifest = list(
+          format = "JSON_ARRAY",
+          total_chunk_count = 2L,
+          total_row_count = 3L,
+          schema = list(
+            columns = list(
+              list(name = "id", type_name = "INT")
+            )
+          )
+        ),
+        result = list(data_array = list(list(1L), list(2L)))
+      )
+    },
+    .package = "brickster"
+  )
+  httr2::local_mocked_responses(function(req) {
+    expect_match(req$url, "/sql/statements/stmt-inline/result/chunks/1$")
+    httr2::response_json(body = list(data_array = list(list(3L))))
+  })
+
+  expect_identical(dbFetch(res)$id, 1:3)
+})
+
 test_that("volume-method selection warns/errors at size thresholds", {
   expect_true(db_should_use_volume_method(data.frame(x = 1), "/Volumes/c/s/v"))
   expect_false(db_should_use_volume_method(data.frame(x = 1), NULL, temporary = TRUE))

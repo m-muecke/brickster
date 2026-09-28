@@ -437,6 +437,39 @@ db_sql_process_inline <- function(result_data, manifest, row_limit = NULL) {
   results
 }
 
+db_sql_fetch_inline_chunks <- function(
+  statement_id,
+  result_data,
+  manifest,
+  row_limit = NULL,
+  host = db_host(),
+  token = db_token()
+) {
+  chunk_indices <- seq_len(max(manifest$total_chunk_count - 1L, 0L))
+  if (!is.null(row_limit) && row_limit > 0 && !is.null(manifest$chunks)) {
+    beyond_limit <- purrr::keep(
+      manifest$chunks,
+      \(x) (x$row_offset %||% 0) >= row_limit
+    )
+    chunk_indices <- setdiff(
+      chunk_indices,
+      purrr::map_dbl(beyond_limit, \(x) x$chunk_index %||% 0)
+    )
+  }
+
+  chunks <- purrr::map(chunk_indices, function(chunk_index) {
+    db_sql_exec_result(
+      statement_id = statement_id,
+      chunk_index = chunk_index,
+      host = host,
+      token = token
+    )$data_array
+  })
+
+  result_data$data_array <- c(result_data$data_array, purrr::list_c(chunks))
+  result_data
+}
+
 #' Create Empty Data Frame from Query Manifest
 #'
 #' @description
@@ -741,8 +774,16 @@ db_sql_query <- function(
   # Fetch and process results based on disposition
   if (disposition == "INLINE") {
     # Use inline processor for JSON_ARRAY results
-    db_sql_process_inline(
+    result_data <- db_sql_fetch_inline_chunks(
+      statement_id = resp$statement_id,
       result_data = resp$result,
+      manifest = resp$manifest,
+      row_limit = row_limit,
+      host = host,
+      token = token
+    )
+    db_sql_process_inline(
+      result_data = result_data,
       manifest = resp$manifest,
       row_limit = row_limit
     )

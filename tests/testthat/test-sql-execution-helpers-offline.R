@@ -62,6 +62,59 @@ test_that("db_sql_query uses inline result processor for INLINE disposition", {
   expect_identical(out$v, 1L)
 })
 
+test_that("db_sql_query follows all INLINE result chunks", {
+  state <- new.env(parent = emptyenv())
+  state$chunks <- integer()
+  state$chunk_info <- lapply(0:2, \(i) list(chunk_index = i, row_offset = i))
+
+  local_mocked_bindings(
+    db_sql_exec_and_wait = function(...) {
+      list(
+        statement_id = "stmt-chunks",
+        manifest = list(
+          total_row_count = 3,
+          total_chunk_count = 3,
+          chunks = state$chunk_info,
+          schema = list(columns = list(list(name = "id", type_name = "INT")))
+        ),
+        result = list(data_array = list(list(1L)), next_chunk_index = 1L)
+      )
+    },
+    .package = "brickster"
+  )
+  httr2::local_mocked_responses(function(req) {
+    expect_match(req$url, "/sql/statements/stmt-chunks/result/chunks/")
+    chunk_index <- as.integer(basename(req$url))
+    state$chunks <- c(state$chunks, chunk_index)
+    httr2::response_json(
+      body = list(data_array = list(list(chunk_index + 1L)))
+    )
+  })
+  query <- function(...) {
+    db_sql_query(
+      "wh",
+      "SELECT 1",
+      disposition = "INLINE",
+      host = "test_host",
+      token = "test_token",
+      show_progress = FALSE,
+      ...
+    )
+  }
+
+  expect_identical(query()$id, 1:3)
+  expect_identical(state$chunks, 1:2)
+
+  state$chunks <- integer()
+  expect_identical(query(row_limit = 2)$id, 1:2)
+  expect_identical(state$chunks, 1L)
+
+  state$chunks <- integer()
+  state$chunk_info <- NULL
+  expect_identical(query()$id, 1:3)
+  expect_identical(state$chunks, 1:2)
+})
+
 test_that("db_sql_query uses external-links processor for EXTERNAL_LINKS disposition", {
   state <- new.env(parent = emptyenv())
   state$external_called <- FALSE
