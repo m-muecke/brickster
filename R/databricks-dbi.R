@@ -1270,8 +1270,8 @@ setMethod(
       effective_staging_volume <- NULL
     }
 
-    # Handle table existence checks for both methods
-    table_exists <- dbExistsTable(conn, name)
+    # Overwrites use CREATE OR REPLACE, so skip the existence query
+    table_exists <- !overwrite && dbExistsTable(conn, name)
 
     if (table_exists && !overwrite && !append) {
       cli::cli_abort(
@@ -1389,8 +1389,8 @@ setMethod(
       effective_staging_volume <- conn@staging_volume
     }
 
-    # Check if table exists for overwrite/append logic
-    table_exists <- dbExistsTable(conn, name)
+    # Overwrites use CREATE OR REPLACE, so skip the existence query
+    table_exists <- !overwrite && dbExistsTable(conn, name)
     if (table_exists && !overwrite && !append) {
       cli::cli_abort(
         "Table {quoted_name} already exists. Use overwrite = TRUE or append = TRUE"
